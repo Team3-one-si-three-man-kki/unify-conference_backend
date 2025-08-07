@@ -18,13 +18,34 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    // === Spring Web + WebSocket ===
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // === Validation ===
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // === Redis ===
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // === MyBatis ===
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+
+    // === 개발 편의성 ===
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // === Lombok ===
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // === 테스트 ===
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // === health check ===
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
 tasks.named('test') {
