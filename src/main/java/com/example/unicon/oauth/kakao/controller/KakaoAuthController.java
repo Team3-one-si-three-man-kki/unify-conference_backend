@@ -3,6 +3,7 @@ package com.example.unicon.oauth.kakao.controller;
 import com.example.unicon.oauth.kakao.dto.KakaoUserInfoResponse;
 import com.example.unicon.oauth.kakao.service.KakaoAuthService;
 import com.example.unicon.user.service.UserService;
+import com.example.unicon.user.vo.UserVO;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -35,11 +37,16 @@ public class KakaoAuthController {
      * 카카오 로그인/회원가입 URL을 프론트에 제공
      */
     @GetMapping("/auth-url")
-    public ResponseEntity<Map<String, String>> getKakaoAuthUrl(@RequestParam String type) {
-        String url = kakaoAuthService.getKakaoLoginUrl(type);
+    public ResponseEntity<Map<String, String>> getKakaoAuthUrl(@RequestParam String type, @RequestParam String subDomain) {
+        // 🔽 state 값에 subDomain을 포함시킴 (예: "login:testcompany")
+        String state = type + ":" + subDomain;
+        String url = kakaoAuthService.getKakaoLoginUrl(state);
         return ResponseEntity.ok(Map.of("url", url));
     }
 
+    /**
+     * 카카오 인증 후 호출되는 콜백 API
+     */
     /**
      * 카카오 인증 후 호출되는 콜백 API
      */
@@ -47,6 +54,15 @@ public class KakaoAuthController {
     public void kakaoCallback(@RequestParam String code, @RequestParam String state, HttpServletResponse response) throws IOException {
         String redirectUrl;
         try {
+            // 🔽 state 값에서 type과 subDomain 분리
+            String[] stateParts = state.split(":", 2);
+            String type = stateParts[0];
+            String subDomain = stateParts.length > 1 ? stateParts[1] : "";
+
+            if (subDomain.isEmpty()) {
+                throw new IllegalArgumentException("서브도메인 정보가 없습니다.");
+            }
+
             String accessToken = kakaoAuthService.getAccessToken(code);
             KakaoUserInfoResponse userInfo = kakaoAuthService.getUserInfo(accessToken);
 
@@ -54,11 +70,10 @@ public class KakaoAuthController {
                 throw new RuntimeException("카카오 사용자 정보 조회에 실패했거나 이메일 동의가 필요합니다.");
             }
 
-            // state 값에 따라 로그인 또는 회원가입 로직 분기
-            if ("signup".equalsIgnoreCase(state)) {
-                redirectUrl = handleSignupFlow(userInfo);
+            if ("signup".equalsIgnoreCase(type)) {
+                redirectUrl = handleSignupFlow(userInfo, subDomain); // subDomain 전달
             } else {
-                redirectUrl = handleLoginFlow(userInfo);
+                redirectUrl = handleLoginFlow(userInfo, subDomain); // subDomain 전달
             }
 
         } catch (Exception e) {
@@ -69,30 +84,27 @@ public class KakaoAuthController {
         response.sendRedirect(redirectUrl);
     }
 
-    private String handleLoginFlow(KakaoUserInfoResponse userInfo) throws IOException {
-        boolean isUserRegistered = !userService.isEmailAvailable(userInfo.email());
-        if (isUserRegistered) {
+    private String handleLoginFlow(KakaoUserInfoResponse userInfo, String subDomain) throws IOException {
+        Optional<UserVO> userOptional = userService.getUserByEmailAndSubdomain(userInfo.email(), subDomain);
+
+        if (userOptional.isPresent()) {
             // TODO: 기존 사용자인 경우, JWT 토큰을 발급하고 대시보드로 리디렉션
-            // 이 부분은 기존 로그인 로직과 통합이 필요합니다.
-            log.info("기존 카카오 사용자 로그인 성공: {}", userInfo.email());
-            return FRONTEND_DASHBOARD_URL + "?message=kakao_login_success"; // 임시 리디렉션
+            log.info("[{}] 테넌트의 카카오 사용자 로그인 성공: {}", subDomain, userInfo.email());
+            return FRONTEND_DASHBOARD_URL + "?message=kakao_login_success";
         } else {
-            // 가입되지 않은 사용자
-            log.warn("등록되지 않은 카카오 사용자 로그인 시도: {}", userInfo.email());
-            String errorMessage = URLEncoder.encode("등록되지 않은 사용자입니다. 먼저 회원가입을 진행해주세요.", StandardCharsets.UTF_8);
-            return FRONTEND_LOGIN_URL + "?error=" + errorMessage;
+            log.warn("[{}] 테넌트에 등록되지 않은 카카오 사용자 로그인 시도: {}", subDomain, userInfo.email());
+            String errorMessage = URLEncoder.encode("해당 테넌트에 등록되지 않은 사용자입니다.", StandardCharsets.UTF_8);
+            return FRONTEND_LOGIN_URL + "?tenant=" + subDomain + "&error=" + errorMessage;
         }
     }
 
-    private String handleSignupFlow(KakaoUserInfoResponse userInfo) throws IOException {
+    private String handleSignupFlow(KakaoUserInfoResponse userInfo, String subDomain) throws IOException {
         boolean isUserRegistered = !userService.isEmailAvailable(userInfo.email());
         if (isUserRegistered) {
-            // 이미 가입된 사용자
             log.warn("이미 가입된 카카오 사용자 회원가입 시도: {}", userInfo.email());
-            String errorMessage = URLEncoder.encode("이미 가입된 이메일입니다. 로그인 해주세요.", StandardCharsets.UTF_8);
+            String errorMessage = URLEncoder.encode("이미 다른 테넌트에 가입된 이메일입니다. 로그인 해주세요.", StandardCharsets.UTF_8);
             return FRONTEND_SIGNUP_URL + "?error=" + errorMessage;
         } else {
-            // 신규 사용자: 이름과 이메일을 파라미터로 담아 회원가입 페이지로 리디렉션
             log.info("신규 카카오 사용자 회원가입 진행: {}", userInfo.email());
             String nickname = URLEncoder.encode(userInfo.nickname(), StandardCharsets.UTF_8);
             String email = URLEncoder.encode(userInfo.email(), StandardCharsets.UTF_8);

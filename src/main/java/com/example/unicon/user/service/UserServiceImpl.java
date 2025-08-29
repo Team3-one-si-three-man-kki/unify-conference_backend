@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -77,5 +79,12 @@ public class UserServiceImpl implements UserService {
 
         userMapper.insertUser(user);
         return user;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserVO> getUserByEmailAndSubdomain(String email, String subDomain) {
+        // 일반 로그인 시 사용했던 매퍼 메소드를 재사용하여 사용자를 조회합니다.
+        return userMapper.findUserWithTenantByEmailAndSubdomain(email, subDomain);
     }
 }
