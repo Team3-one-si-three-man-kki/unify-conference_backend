@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.tenant.mapper.TenantMapper">
+
+    <select id="findBySubDomain" resultType="com.example.unicon.tenant.vo.TenantVO">
+        SELECT tenant_id, name, sub_domain, is_active, created_at
+        FROM tenant
+        WHERE sub_domain = #{subDomain}
+    </select>
+
+    <insert id="insertTenant" useGeneratedKeys="true" keyProperty="tenantId">
+        INSERT INTO tenant (name, sub_domain, is_active, created_at)
+        VALUES (#{name}, #{subDomain}, #{isActive}, NOW())
+    </insert>
+
+</mapper>
