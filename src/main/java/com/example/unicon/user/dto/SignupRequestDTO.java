@@ -8,8 +8,8 @@ public record SignupRequestDTO(
         @NotBlank @Size(min=2, max=50) String userName,
         @NotBlank @Size(min=2, max=50) String tenantName,
         @NotBlank @Email String email,
-        @NotBlank @Size(min=8, max=64) String password,
-        @NotBlank @Size(min=8, max=64) String passwordConfirm,
+        String password,
+        String passwordConfirm,
         @NotBlank                      String subDomain,
         @NotBlank                      String signupType
 ) {
