@@ -1,6 +1,7 @@
 package com.example.unicon.user.controller;
 
 import com.example.unicon.infrastructure.redis.token.RefreshTokenRepository;
+import com.example.unicon.user.dto.EmailCheckRequestDTO;
 import com.example.unicon.user.dto.LoginRequestDTO;
 import com.example.unicon.user.dto.SignupRequestDTO;
 import com.example.unicon.user.dto.UserResponseDTO;
@@ -12,11 +13,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/guest")
@@ -63,5 +67,18 @@ public class UserController {
         // 5. 응답 본문으로 사용자 정보 반환 (이전과 동일)
         UserResponseDTO responseDTO = new UserResponseDTO(user, user.getTenantName(), user.getSubDomain());
         return ResponseEntity.ok(responseDTO);
+    }
+
+    @PostMapping("/check-email")
+    public ResponseEntity<Map<String, Object>> checkEmail(@Valid @RequestBody EmailCheckRequestDTO requestDTO) {
+        boolean isAvailable = userService.isEmailAvailable(requestDTO.email());
+        if (isAvailable) {
+            return ResponseEntity.ok(Map.of("isAvailable", true, "message", "사용 가능한 이메일입니다."));
+        } else {
+            // 409 Conflict 상태 코드는 "이미 리소스가 존재하여 충돌이 발생했다"는 의미로,
+            // 중복된 이메일 응답에 적합합니다.
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("isAvailable", false, "message", "이미 사용 중인 이메일입니다."));
+        }
     }
 }
