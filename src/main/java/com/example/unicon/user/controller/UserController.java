@@ -1,6 +1,7 @@
 package com.example.unicon.user.controller;
 
 import com.example.unicon.infrastructure.redis.token.RefreshTokenRepository;
+import com.example.unicon.infrastructure.redis.token.TokenBlacklistRepository;
 import com.example.unicon.user.dto.EmailCheckRequestDTO;
 import com.example.unicon.user.dto.LoginRequestDTO;
 import com.example.unicon.user.dto.SignupRequestDTO;
@@ -16,19 +17,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import java.util.Map;
-import com.example.unicon.infrastructure.redis.token.TokenBlacklistRepository; // ◀️ 추가
-import org.springframework.security.core.Authentication; // ◀️ 추가
-import org.springframework.security.core.context.SecurityContextHolder; // ◀️ 추가
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class UserController {
 
     private final UserService userService;
@@ -112,4 +111,195 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "성공적으로 로그아웃되었습니다."));
     }
 
+    /**
+     * 테넌트별 사용자 목록 조회
+     */
+    @GetMapping("/user/list")
+    public ResponseEntity<Map<String, Object>> getUserList(
+            @RequestParam Integer tenantId,
+            @RequestParam(required = false) String searchKeyword) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            System.out.println("사용자 목록 조회 요청 - tenantId: " + tenantId + ", searchKeyword: " + searchKeyword);
+
+            UserVO vo = new UserVO();
+            vo.setTenantId(tenantId);
+            vo.setSearchKeyword(searchKeyword);
+
+            List<UserVO> userList = userService.selectUsersByTenant(vo);
+
+            response.put("success", true);
+            response.put("data", userList);
+            response.put("total", userList.size());
+
+            System.out.println("조회 결과 개수: " + userList.size());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("사용자 목록 조회 중 오류: " + e.getMessage());
+            e.printStackTrace();
+
+            response.put("success", false);
+            response.put("message", "사용자 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            response.put("data", new ArrayList<>());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 사용자 목록 저장 (CUD 처리)
+     */
+    @PostMapping("/user/save")
+    public ResponseEntity<Map<String, Object>> saveUsers(@RequestBody Map<String, Object> requestData) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            System.out.println("사용자 저장 요청 받음: " + requestData);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> saveDataList = (List<Map<String, Object>>) requestData.get("saveDataList");
+
+            if (saveDataList != null && !saveDataList.isEmpty()) {
+                List<UserVO> userList = new ArrayList<>();
+
+                for (Map<String, Object> userData : saveDataList) {
+                    UserVO userVo = new UserVO();
+
+                    // 데이터 매핑
+                    Object userIdObj = userData.get("userId");
+                    String userId = (userIdObj != null) ? String.valueOf(userIdObj) : null;
+                    String rowStatus = (String) userData.get("rowStatus");
+
+                    userVo.setUserId(userId == null || userId.isEmpty() || "null".equals(userId) ? null : userId);
+
+                    // tenantId 처리 개선
+                    Object tenantIdObj = userData.get("tenantId");
+                    if (tenantIdObj instanceof Integer) {
+                        userVo.setTenantId((Integer) tenantIdObj);
+                    } else if (tenantIdObj instanceof String) {
+                        userVo.setTenantId(Integer.valueOf((String) tenantIdObj));
+                    }
+
+                    userVo.setUserName((String) userData.get("name"));
+                    userVo.setEmail((String) userData.get("email"));
+
+                    // 비밀번호 처리
+                    String password = (String) userData.get("password");
+                    if (password != null && !password.isEmpty() && !"******".equals(password)) {
+                        userVo.setPassword(password);
+                    }
+
+                    userVo.setRole((String) userData.get("role"));
+                    userVo.setCreateAt(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+                    userVo.setRowStatus(rowStatus != null ? rowStatus : "C"); // 기본값 설정
+
+                    // isActive 처리
+                    Object isActiveObj = userData.get("isActive");
+                    if (isActiveObj instanceof Boolean) {
+                        userVo.setActive((Boolean) isActiveObj);
+                    } else {
+                        userVo.setActive(true);
+                    }
+
+                    userList.add(userVo);
+                }
+
+                // 서비스 호출
+                userService.saveUserList(userList);
+
+                response.put("success", true);
+                response.put("message", "저장이 완료되었습니다.");
+                System.out.println("사용자 저장 완료");
+            } else {
+                response.put("success", false);
+                response.put("message", "저장할 데이터가 없습니다.");
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("사용자 저장 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "저장 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 테넌트별 이메일 중복 검사
+     */
+    @PostMapping("/user/check-email-by-tenant")
+    public ResponseEntity<Map<String, Object>> checkEmailByTenant(@RequestBody Map<String, Object> requestData) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            String email = (String) requestData.get("email");
+            Object tenantIdObj = requestData.get("tenantId");
+
+            Integer tenantId;
+            if (tenantIdObj instanceof Integer) {
+                tenantId = (Integer) tenantIdObj;
+            } else if (tenantIdObj instanceof String) {
+                tenantId = Integer.valueOf((String) tenantIdObj);
+            } else {
+                throw new IllegalArgumentException("잘못된 tenantId 형식입니다.");
+            }
+
+            System.out.println("이메일 중복 검사 요청 - email: " + email + ", tenantId: " + tenantId);
+
+            boolean available = userService.isEmailAvailableInTenant(email, String.valueOf(tenantId));
+
+            response.put("success", true);
+            response.put("available", available);
+            response.put("email", email);
+            response.put("tenantId", tenantId);
+
+            System.out.println("이메일 중복 검사 결과: " + (available ? "사용가능" : "중복"));
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("이메일 중복 검사 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "이메일 중복 검사 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 사용자 삭제
+     */
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String userId) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            UserVO userVo = new UserVO();
+            userVo.setUserId(userId);
+
+            int result = userService.deleteUser(userVo);
+
+            if (result > 0) {
+                response.put("success", true);
+                response.put("message", "사용자가 삭제되었습니다.");
+            } else {
+                response.put("success", false);
+                response.put("message", "삭제할 사용자를 찾을 수 없습니다.");
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("사용자 삭제 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "사용자 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 }

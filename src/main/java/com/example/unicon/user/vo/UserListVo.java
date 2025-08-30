@@ -8,8 +8,8 @@ import java.util.List;
 public class UserListVo {
     private static final long serialVersionUID = 1L;
 
-    private List<UserVo> userVoList;
-    private List<UserVo> saveDataList;
+    private List<UserVO> userVoList;
+    private List<UserVO> saveDataList;
     private long totalCount;
     private int pageSize;
     private int pageIndex;
@@ -17,19 +17,19 @@ public class UserListVo {
     public UserListVo() {
     }
 
-    public List<UserVo> getUserVoList() {
+    public List<UserVO> getUserVoList() {
         return userVoList;
     }
 
-    public void setUserVoList(List<UserVo> userVoList) {
+    public void setUserVoList(List<UserVO> userVoList) {
         this.userVoList = userVoList;
     }
 
-    public List<UserVo> getSaveDataList() {
+    public List<UserVO> getSaveDataList() {
         return saveDataList;
     }
 
-    public void setSaveDataList(List<UserVo> saveDataList) {
+    public void setSaveDataList(List<UserVO> saveDataList) {
         this.saveDataList = saveDataList;
     }
 

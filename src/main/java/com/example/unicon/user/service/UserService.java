@@ -4,7 +4,6 @@ import com.example.unicon.user.dto.LoginRequestDTO;
 import com.example.unicon.user.dto.SignupRequestDTO;
 import com.example.unicon.user.dto.UserResponseDTO;
 import com.example.unicon.user.vo.UserVO;
-import com.example.unicon.user.vo.UserVo;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,12 +32,12 @@ public interface UserService {
     /**
      * 테넌트별 사용자 목록 조회
      */
-    List<UserVo> selectUsersByTenant(UserVo vo) throws Exception;
+    List<UserVO> selectUsersByTenant(UserVO vo) throws Exception;
 
     /**
      * 사용자 목록 저장 (CUD 처리)
      */
-    void saveUserList(List<UserVo> userList) throws Exception;
+    void saveUserList(List<UserVO> userList) throws Exception;
 
     /**
      * 테넌트 내 이메일 중복 검사
@@ -48,20 +47,20 @@ public interface UserService {
     /**
      * 사용자 등록
      */
-    int insertUser(UserVo userVo) throws Exception;
+    int insertUser(UserVO userVo) throws Exception;
 
     /**
      * 사용자 수정
      */
-    int updateUser(UserVo userVo) throws Exception;
+    int updateUser(UserVO userVo) throws Exception;
 
     /**
      * 사용자 삭제
      */
-    int deleteUser(UserVo userVo) throws Exception;
+    int deleteUser(UserVO userVo) throws Exception;
 
     /**
      * 사용자 상세 조회
      */
-    UserVo selectUser(UserVo userVo) throws Exception;
+    UserVO selectUser(UserVO userVo) throws Exception;
 }
