@@ -32,4 +32,113 @@
         VALUES (#{tenantId}, #{userName}, #{email}, #{password}, #{role}, NOW())
     </insert>
 
+    <!-- 테넌트별 사용자 목록 조회 -->
+    <select id="selectUsersByTenant" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.name AS userName,
+        u.email,
+        u.role,
+        u.created_at AS createAt,
+        u.user_id AS userId,
+        t.is_active AS isActive,
+        t.name AS tenantName,
+        t.sub_domain AS subDomain
+        FROM user u
+        JOIN tenant t ON u.tenant_id = t.tenant_id
+        WHERE u.tenant_id = #{tenantId}
+        <if test="searchKeyword != null and searchKeyword != ''">
+            AND (u.name LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR u.email LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+        ORDER BY u.created_at DESC
+    </select>
+
+    <!-- 이메일과 테넌트로 사용자 조회 (중복 검사용) -->
+    <select id="selectUsersByEmailAndTenant" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.name AS userName,
+        u.email,
+        u.role
+        FROM user u
+        WHERE u.email = #{email}
+        AND u.tenant_id = #{tenantId}
+    </select>
+
+    <!-- 사용자 상세 조회 -->
+    <select id="selectUser" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.name AS userName,
+        u.email,
+        u.password,
+        u.role,
+        u.created_at AS createAt,
+        u.user_id AS userId,
+        t.is_active AS isActive,
+        t.name AS tenantName,
+        t.sub_domain AS subDomain
+        FROM user u
+        JOIN tenant t ON u.tenant_id = t.tenant_id
+        WHERE u.user_id = #{userId}
+    </select>
+
+    <!-- 사용자 수정 -->
+    <update id="updateUser">
+        UPDATE user SET
+        name = #{userName},
+        email = #{email},
+        <if test="password != null and password != ''">
+            password = #{password},
+        </if>
+        role = #{role},
+        updated_at = NOW()
+        WHERE user_id = #{userId}
+        AND tenant_id = #{tenantId}
+    </update>
+
+    <!-- 사용자 삭제 -->
+    <delete id="deleteUser">
+        DELETE FROM user
+        WHERE user_id = #{userId}
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+    </delete>
+
+    <!-- 이메일로 사용자 조회 -->
+    <select id="getUserByEmail" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        user_id AS id,
+        tenant_id AS tenantId,
+        name AS userName,
+        email,
+        password,
+        role
+        FROM user
+        WHERE email = #{email}
+    </select>
+
+    <!-- 로그인용 사용자 조회 -->
+    <select id="loginUser" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.name AS userName,
+        u.email,
+        u.password,
+        u.role,
+        t.is_active AS isActive,
+        t.name AS tenantName,
+        t.sub_domain AS subDomain
+        FROM user u
+        JOIN tenant t ON u.tenant_id = t.tenant_id
+        WHERE u.email = #{email}
+        AND t.sub_domain = #{subDomain}
+    </select>
+
 </mapper>
