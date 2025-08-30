@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.module.mapper.ModuleMapper">
+
+    <select id="findModulesByTenantId" resultType="com.example.unicon.module.vo.TenantModuleDetailVO">
+        SELECT
+            m.module_id AS moduleId,
+            m.name,
+            m.description,
+            m.icon,
+            m.code,
+            DATE_FORMAT(tm.purchased_at, '%Y-%m-%d') AS purchasedAt
+        FROM
+            tenant_module tm
+                JOIN
+            module m ON tm.module_id = m.module_id
+        WHERE
+            tm.tenant_id = #{tenantId}
+    </select>
+
+    <select id="findUsageByModuleId" resultType="com.example.unicon.module.vo.ModuleUsageVO">
+        SELECT
+            s.name,
+            DATE_FORMAT(s.start_time, '%Y-%m-%d') as startTime
+        FROM
+            session s
+                JOIN
+            session_module sm ON s.session_id = sm.session_id
+        WHERE
+            sm.module_id = #{moduleId}
+          AND s.tenant_id = #{tenantId} ORDER BY
+            s.start_time DESC
+    </select>
+
+</mapper>
