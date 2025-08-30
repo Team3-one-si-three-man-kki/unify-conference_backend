@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class testController {
-    @Value("${TEST_VALUE}")
-    private int httpPort;
+//    @Value("${TEST_VALUE}")
+//    private int httpPort;
 
      @GetMapping("/test")
      public String testEndpoint() {
-         System.out.println("HTTP Port: " + httpPort);
+//         System.out.println("HTTP Port: " + httpPort);
          return "This is a test endpoint";
      }
 }
