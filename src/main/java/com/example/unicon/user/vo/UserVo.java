@@ -19,7 +19,7 @@ public class UserVO {
     private String rowStatus; // CUD 처리용
     private String userId;
     private String createAt;
-    private String searchKeyword;
+    private String searchKeyword;;
 
     // JOIN 시 tenant 테이블에서 값을 받아올 필드들
     private boolean isActive;
