@@ -101,13 +101,16 @@ jobs:
             docker rm unify-backend || true
 
             # Run the new container
-            docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} \
-              -e SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }} \
-              -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
-              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              -e DB_USER=${{ secrets.DB_USER }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
-              -e REDIS_PORT=${{ secrets.REDIS_PORT }} \
-              -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
+            docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} 
+              -e SPRING_PROFILES_ACTIVE=dev 
+              -e SERVER_PORT=${{ secrets.SERVER_PORT }} 
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" 
+              -e DB_USER=${{ secrets.DB_USER }} 
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} 
+              -e REDIS_HOST=${{ secrets.REDIS_HOST }} 
+              -e REDIS_PORT=${{ secrets.REDIS_PORT }} 
+              -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} 
+              -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} 
+              -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} 
+              -e KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} 
               ${{needs.docker-build-push.outputs.image_tag}}
