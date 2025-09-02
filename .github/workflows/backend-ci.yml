@@ -41,11 +41,13 @@ jobs:
 
   docker-build-push:
     name: Build and Push Docker Image
-    needs: build # This job runs only after the 'build' job succeeds
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Needed to push packages to GHCR
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout code
@@ -58,13 +60,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=
+            
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
     name: Deploy to Server
@@ -83,7 +94,7 @@ jobs:
             echo ${{ secrets.DOCKER_PASSWORD }} | docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
             # Pull the latest image
-            docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
+            docker pull ${{needs.docker-build-push.outputs.image_tag}}
 
             # Stop and remove the old container if it exists
             docker stop unify-backend || true
@@ -99,4 +110,4 @@ jobs:
               -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
               -e REDIS_PORT=${{ secrets.REDIS_PORT }} \
               -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
-              ghcr.io/${{ github.repository }}:${{ github.sha }}
+              ${{needs.docker-build-push.outputs.image_tag}}
