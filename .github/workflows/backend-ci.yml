@@ -96,4 +96,23 @@ jobs:
             docker pull $IMAGE_TAG
             docker stop unify-backend || true
             docker rm unify-backend || true
-            docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} -e SPRING_PROFILES_ACTIVE=dev -e SERVER_PORT=${{ secrets.SERVER_PORT }} -e DATABASE_URL="${{ secrets.DATABASE_URL }}" -e DB_USER=${{ secrets.DB_USER }} -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e REDIS_HOST=${{ secrets.REDIS_HOST }} -e REDIS_PORT=${{ secrets.REDIS_PORT }} -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} -e KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} $IMAGE_TAG
+
+            # Create an environment file
+            cat << EOF > .env
+            SPRING_PROFILES_ACTIVE=dev
+            SERVER_PORT=${{ secrets.SERVER_PORT }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+            KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+            EOF
+
+            docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} --env-file .env $IMAGE_TAG
+
+            # Clean up the env file
+            rm .env
