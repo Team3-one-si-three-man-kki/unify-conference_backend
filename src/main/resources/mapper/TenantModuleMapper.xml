@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.domain.tenantModule.mapper.TenantModuleMapper">
+
+    <select id="tenantModuleDtoList" resultType="com.example.unicon.domain.tenantModule.dto.TenantModuleDto">
+        SELECT tm.tenant_id,
+               tm.module_id,
+               m.code,
+               m.name,
+               m.description,
+               m.icon
+        FROM tenant_module tm
+            JOIN module m ON tm.module_id = m.module_id
+        WHERE tm.tenant_id = #{tenantId}
+    </select>
+
+    <select id="getTenantModules" resultType="com.example.unicon.domain.tenantModule.dto.TenantModuleDto">
+        SELECT tm.tenant_id,
+               tm.module_id,
+               m.code,
+               m.name,
+               m.description,
+               m.icon
+        FROM tenant_module tm
+            JOIN module m ON tm.module_id = m.module_id
+        WHERE tm.tenant_id = #{tenantId}
+    </select>
+
+</mapper>
