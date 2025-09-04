@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.domain.sessionModule.mapper.SessionModuleMapper">
+
+    <!-- 세션 모듈 관계 생성 -->
+    <insert id="insertSessionModule" parameterType="com.example.unicon.domain.sessionModule.model.SessionModule">
+        INSERT INTO session_module (
+            session_id, module_id, session_module_config
+        ) VALUES (
+            #{sessionId}, #{moduleId}, #{sessionModuleConfig}
+        )
+    </insert>
+
+    <!-- 세션 모듈 관계 업데이트 -->
+    <update id="updateSessionModule" parameterType="com.example.unicon.domain.sessionModule.model.SessionModule">
+        UPDATE session_module SET
+            session_module_config = #{sessionModuleConfig}
+        WHERE session_id = #{sessionId} AND module_id = #{moduleId}
+    </update>
+
+    <!-- 특정 세션-모듈 관계 삭제 -->
+    <delete id="deleteSessionModule">
+        DELETE FROM session_module 
+        WHERE session_id = #{sessionId} AND module_id = #{moduleId}
+    </delete>
+
+    <!-- 세션의 모든 모듈 관계 삭제 -->
+    <delete id="deleteAllBySessionId">
+        DELETE FROM session_module 
+        WHERE session_id = #{sessionId}
+    </delete>
+
+    <!-- 특정 세션-모듈 관계 조회 -->
+    <select id="findBySessionIdAndModuleId" resultType="com.example.unicon.domain.sessionModule.model.SessionModule">
+        SELECT
+            session_id as sessionId,
+            module_id as moduleId,
+            session_module_config as sessionModuleConfig
+        FROM session_module
+        WHERE session_id = #{sessionId} AND module_id = #{moduleId}
+    </select>
+
+    <!-- 세션별 모듈 조회 -->
+    <select id="findBySessionId" resultType="com.example.unicon.domain.sessionModule.model.SessionModule">
+        SELECT
+            session_id as sessionId,
+            module_id as moduleId,
+            session_module_config as sessionModuleConfig
+        FROM session_module
+        WHERE session_id = #{sessionId}
+        ORDER BY module_id
+    </select>
+
+    <!-- 모듈별 세션 조회 -->
+    <select id="findByModuleId" resultType="com.example.unicon.domain.sessionModule.model.SessionModule">
+        SELECT
+            session_id as sessionId,
+            module_id as moduleId,
+            session_module_config as sessionModuleConfig
+        FROM session_module
+        WHERE module_id = #{moduleId}
+        ORDER BY session_id
+    </select>
+
+</mapper>

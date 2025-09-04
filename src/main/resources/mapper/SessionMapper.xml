@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.domain.session.mapper.SessionMapper">
+
+    <!-- 세션 생성 -->
+    <insert id="insertSession" parameterType="com.example.unicon.domain.session.model.Session" useGeneratedKeys="true" keyProperty="sessionId">
+        INSERT INTO session (
+            name, start_time, end_time, invite_link, link_expiry,
+            created_by, tenant_id, max_participant
+        ) VALUES (
+            #{name}, #{startTime}, #{endTime}, #{inviteLink}, #{linkExpiry},
+            #{createdBy}, #{tenantId}, #{maxParticipant}
+        )
+    </insert>
+
+    <!-- 세션 업데이트 -->
+    <update id="updateSession" parameterType="com.example.unicon.domain.session.model.Session">
+        UPDATE session SET
+            name = #{name},
+            start_time = #{startTime},
+            end_time = #{endTime},
+            invite_link = #{inviteLink},
+            link_expiry = #{linkExpiry},
+            max_participant = #{maxParticipant}
+        WHERE session_id = #{sessionId}
+    </update>
+
+    <!-- 세션 조회 -->
+    <select id="findSessionById" resultType="com.example.unicon.domain.session.model.Session">
+        SELECT 
+            session_id as sessionId,
+            name,
+            start_time as startTime,
+            end_time as endTime,
+            invite_link as inviteLink,
+            link_expiry as linkExpiry,
+            created_by as createdBy,
+            tenant_id as tenantId,
+            max_participant as maxParticipant
+        FROM session
+        WHERE session_id = #{sessionId}
+    </select>
+
+    <!-- 테넌트별 세션 목록 조회 -->
+    <select id="findSessionsByTenantId" resultType="com.example.unicon.domain.session.model.Session">
+        SELECT 
+            session_id as sessionId,
+            name,
+            start_time as startTime,
+            end_time as endTime,
+            invite_link as inviteLink,
+            link_expiry as linkExpiry,
+            created_by as createdBy,
+            tenant_id as tenantId,
+            max_participant as maxParticipant
+        FROM session
+        WHERE tenant_id = #{tenantId}
+        ORDER BY session_id DESC
+    </select>
+
+</mapper>
