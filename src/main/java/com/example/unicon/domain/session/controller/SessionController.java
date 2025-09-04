@@ -57,7 +57,7 @@ public class SessionController {
             } else {
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
         } catch (Exception e) {
             SessionCreateResponseDto response = new SessionCreateResponseDto();
             response.setSuccess(false);
@@ -65,4 +65,5 @@ public class SessionController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
 }
