@@ -74,55 +74,111 @@ public class SessionModuleService {
                 Map<String, Object> modulesMap = (Map<String, Object>) modulesObj;
                 System.out.println("Modules Map: " + modulesMap);
                 
-                // 각 영역(area)별로 모듈 처리
-                for (Map.Entry<String, Object> areaEntry : modulesMap.entrySet()) {
-                    String areaName = areaEntry.getKey();
-                    System.out.println("Processing area: " + areaName);
+                // 새로운 구조: bottom_modules 영역만 처리 (main_video는 고정 모듈이므로 제외)
+                if (modulesMap.containsKey("bottom_modules") && modulesMap.get("bottom_modules") instanceof List) {
+                    List<?> modules = (List<?>) modulesMap.get("bottom_modules");
+                    System.out.println("Bottom modules: " + modules);
                     
-                    if (areaEntry.getValue() instanceof List) {
-                        List<?> modules = (List<?>) areaEntry.getValue();
-                        System.out.println("Area " + areaName + " modules: " + modules);
+                    for (int position = 0; position < modules.size(); position++) {
+                        Object moduleObj = modules.get(position);
+                        System.out.println("Processing module at position " + position + ": " + moduleObj);
                         
-                        for (int position = 0; position < modules.size(); position++) {
-                            Object moduleObj = modules.get(position);
-                            System.out.println("Processing module at position " + position + ": " + moduleObj);
+                        if (moduleObj instanceof Map) {
+                            Map<?, ?> module = (Map<?, ?>) moduleObj;
                             
-                            if (moduleObj instanceof Map) {
-                                Map<?, ?> module = (Map<?, ?>) moduleObj;
+                            // moduleId 추출
+                            Object moduleIdObj = module.get("moduleId");
+                            if (moduleIdObj == null) {
+                                moduleIdObj = module.get("id");
+                            }
+                            System.out.println("Module ID Object: " + moduleIdObj);
+                            
+                            // 고정 모듈 제외
+                            Object isFixed = module.get("isFixed");
+                            System.out.println("Is Fixed: " + isFixed);
+                            if (isFixed != null && Boolean.TRUE.equals(isFixed)) {
+                                System.out.println("Skipping fixed module: " + moduleIdObj);
+                                continue;
+                            }
+                            
+                            if (moduleIdObj != null) {
+                                Integer moduleId = getModuleId(moduleIdObj);
+                                System.out.println("Converted Module ID: " + moduleId);
                                 
-                                // moduleId 추출
-                                Object moduleIdObj = module.get("moduleId");
-                                if (moduleIdObj == null) {
-                                    moduleIdObj = module.get("id");
-                                }
-                                System.out.println("Module ID Object: " + moduleIdObj);
-                                
-                                // 고정 모듈 제외
-                                Object isFixed = module.get("isFixed");
-                                System.out.println("Is Fixed: " + isFixed);
-                                if (isFixed != null && Boolean.TRUE.equals(isFixed)) {
-                                    System.out.println("Skipping fixed module: " + moduleIdObj);
-                                    continue;
-                                }
-                                
-                                if (moduleIdObj != null) {
-                                    Integer moduleId = getModuleId(moduleIdObj);
-                                    System.out.println("Converted Module ID: " + moduleId);
+                                if (moduleId != null) {
+                                    SessionModuleCreateRequestDto request = new SessionModuleCreateRequestDto();
+                                    request.setSessionId(sessionId);
+                                    request.setModuleId(moduleId);
+                                    request.setArea("bottom_modules");
+                                    request.setPosition(position);
                                     
-                                    if (moduleId != null) {
-                                        SessionModuleCreateRequestDto request = new SessionModuleCreateRequestDto();
-                                        request.setSessionId(sessionId);
-                                        request.setModuleId(moduleId);
-                                        request.setArea(areaName);
-                                        request.setPosition(position);
-                                        
-                                        System.out.println("Creating session module: " + request);
-                                        createSessionModule(request);
-                                    } else {
-                                        System.out.println("Module ID is null after conversion for: " + moduleIdObj);
-                                    }
+                                    System.out.println("Creating session module: " + request);
+                                    createSessionModule(request);
                                 } else {
-                                    System.out.println("Module ID Object is null for module: " + module);
+                                    System.out.println("Module ID is null after conversion for: " + moduleIdObj);
+                                }
+                            } else {
+                                System.out.println("Module ID Object is null for module: " + module);
+                            }
+                        }
+                    }
+                } else {
+                    // 기존 bottom_1~10 형태 호환성을 위한 처리
+                    for (Map.Entry<String, Object> areaEntry : modulesMap.entrySet()) {
+                        String areaName = areaEntry.getKey();
+                        
+                        // main_video는 고정 모듈이므로 건너뛰기
+                        if ("main_video".equals(areaName)) {
+                            continue;
+                        }
+                        
+                        System.out.println("Processing legacy area: " + areaName);
+                        
+                        if (areaEntry.getValue() instanceof List) {
+                            List<?> modules = (List<?>) areaEntry.getValue();
+                            System.out.println("Area " + areaName + " modules: " + modules);
+                            
+                            for (int position = 0; position < modules.size(); position++) {
+                                Object moduleObj = modules.get(position);
+                                System.out.println("Processing module at position " + position + ": " + moduleObj);
+                                
+                                if (moduleObj instanceof Map) {
+                                    Map<?, ?> module = (Map<?, ?>) moduleObj;
+                                    
+                                    // moduleId 추출
+                                    Object moduleIdObj = module.get("moduleId");
+                                    if (moduleIdObj == null) {
+                                        moduleIdObj = module.get("id");
+                                    }
+                                    System.out.println("Module ID Object: " + moduleIdObj);
+                                    
+                                    // 고정 모듈 제외
+                                    Object isFixed = module.get("isFixed");
+                                    System.out.println("Is Fixed: " + isFixed);
+                                    if (isFixed != null && Boolean.TRUE.equals(isFixed)) {
+                                        System.out.println("Skipping fixed module: " + moduleIdObj);
+                                        continue;
+                                    }
+                                    
+                                    if (moduleIdObj != null) {
+                                        Integer moduleId = getModuleId(moduleIdObj);
+                                        System.out.println("Converted Module ID: " + moduleId);
+                                        
+                                        if (moduleId != null) {
+                                            SessionModuleCreateRequestDto request = new SessionModuleCreateRequestDto();
+                                            request.setSessionId(sessionId);
+                                            request.setModuleId(moduleId);
+                                            request.setArea(areaName);
+                                            request.setPosition(position);
+                                            
+                                            System.out.println("Creating session module: " + request);
+                                            createSessionModule(request);
+                                        } else {
+                                            System.out.println("Module ID is null after conversion for: " + moduleIdObj);
+                                        }
+                                    } else {
+                                        System.out.println("Module ID Object is null for module: " + module);
+                                    }
                                 }
                             }
                         }

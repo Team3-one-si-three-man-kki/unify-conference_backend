@@ -72,9 +72,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                    // request에 tenantId 속성 추가
+                    // request에 tenantId와 email 속성 추가
                     String tenantId = jwtTokenProvider.getTenantIdFromToken(token);
                     request.setAttribute("tenantId", tenantId);
+                    request.setAttribute("email", email);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }

@@ -40,15 +40,19 @@
         WHERE session_id = #{sessionId} AND module_id = #{moduleId}
     </select>
 
-    <!-- 세션별 모듈 조회 -->
+    <!-- 세션별 모듈 조회 (MODULE 테이블과 JOIN) -->
     <select id="findBySessionId" resultType="com.example.unicon.domain.sessionModule.model.SessionModule">
         SELECT
-            session_id as sessionId,
-            module_id as moduleId,
-            session_module_config as sessionModuleConfig
-        FROM session_module
-        WHERE session_id = #{sessionId}
-        ORDER BY module_id
+            sm.session_id as sessionId,
+            sm.module_id as moduleId,
+            sm.session_module_config as sessionModuleConfig,
+            m.code as moduleCode,
+            m.name as moduleName,
+            m.description as moduleDescription
+        FROM session_module sm
+        INNER JOIN module m ON sm.module_id = m.module_id
+        WHERE sm.session_id = #{sessionId}
+        ORDER BY sm.module_id
     </select>
 
     <!-- 모듈별 세션 조회 -->
