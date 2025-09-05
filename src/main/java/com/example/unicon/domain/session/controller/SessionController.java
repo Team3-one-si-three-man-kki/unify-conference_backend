@@ -2,6 +2,7 @@ package com.example.unicon.domain.session.controller;
 
 import com.example.unicon.domain.session.dto.SessionCreateRequestDto;
 import com.example.unicon.domain.session.dto.SessionCreateResponseDto;
+import com.example.unicon.domain.session.model.Session;
 import com.example.unicon.domain.session.service.SessionService;
 import com.example.unicon.user.mapper.UserMapper;
 import com.example.unicon.user.vo.UserVO;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -63,6 +65,25 @@ public class SessionController {
             response.setSuccess(false);
             response.setMessage("사용자 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    // 테넌트별 세션 리스트 조회
+    @GetMapping("/list")
+    public ResponseEntity<List<Session>> getSessionsByTenant(HttpServletRequest httpRequest) {
+        // JWT에서 tenantId 추출
+        String tenantIdStr = (String) httpRequest.getAttribute("tenantId");
+        
+        if (tenantIdStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        try {
+            Integer tenantId = Integer.valueOf(tenantIdStr);
+            List<Session> sessions = sessionService.getSessionsByTenant(tenantId);
+            return ResponseEntity.ok(sessions);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 

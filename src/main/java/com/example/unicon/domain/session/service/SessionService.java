@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +68,11 @@ public class SessionService {
             response.setMessage("세션 생성 중 오류가 발생했습니다: " + e.getMessage());
             return response;
         }
+    }
+    
+    // 테넌트별 세션 조회
+    public List<Session> getSessionsByTenant(Integer tenantId) {
+        return sessionMapper.findSessionsByTenantId(tenantId);
     }
     
     private LocalDateTime parseDateTime(String dateTimeStr) {
