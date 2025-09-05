@@ -6,10 +6,10 @@
     <insert id="insertSession" parameterType="com.example.unicon.domain.session.model.Session" useGeneratedKeys="true" keyProperty="sessionId">
         INSERT INTO session (
             name, start_time, end_time, invite_link, link_expiry,
-            created_by, tenant_id, max_participant
+            created_by, tenant_id, max_participant, layout_config
         ) VALUES (
             #{name}, #{startTime}, #{endTime}, #{inviteLink}, #{linkExpiry},
-            #{createdBy}, #{tenantId}, #{maxParticipant}
+            #{createdBy}, #{tenantId}, #{maxParticipant}, #{layoutConfig}
         )
     </insert>
 
@@ -21,7 +21,8 @@
             end_time = #{endTime},
             invite_link = #{inviteLink},
             link_expiry = #{linkExpiry},
-            max_participant = #{maxParticipant}
+            max_participant = #{maxParticipant},
+            layout_config = #{layoutConfig}
         WHERE session_id = #{sessionId}
     </update>
 
@@ -36,7 +37,8 @@
             link_expiry as linkExpiry,
             created_by as createdBy,
             tenant_id as tenantId,
-            max_participant as maxParticipant
+            max_participant as maxParticipant,
+            layout_config as layoutConfig
         FROM session
         WHERE session_id = #{sessionId}
     </select>
@@ -52,7 +54,8 @@
             link_expiry as linkExpiry,
             created_by as createdBy,
             tenant_id as tenantId,
-            max_participant as maxParticipant
+            max_participant as maxParticipant,
+            layout_config as layoutConfig
         FROM session
         WHERE tenant_id = #{tenantId}
         ORDER BY session_id DESC

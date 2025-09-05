@@ -12,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,12 @@ public class SessionService {
             session.setLinkExpiry(linkExpiry);
             session.setCreatedBy(userId);
             session.setTenantId(tenantId);
+            
+            // layoutConfig JSON 변환 (색상 정보만 포함)
+            if (request.getLayoutConfig() != null) {
+                String layoutConfigJson = objectMapper.writeValueAsString(request.getLayoutConfig());
+                session.setLayoutConfig(layoutConfigJson);
+            }
             
             // 세션 저장 (auto-generated sessionId 받아옴)
             sessionMapper.insertSession(session);
