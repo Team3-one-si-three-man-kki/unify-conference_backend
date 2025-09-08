@@ -27,26 +27,42 @@
             u.email = #{email} AND t.sub_domain = #{subdomain}
     </select>
 
-    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (tenant_id, name, email, password, role, created_at)
-        VALUES (#{tenantId}, #{userName}, #{email}, #{password}, #{role}, NOW())
+    <insert id="insertUser" parameterType="com.example.unicon.user.vo.UserVO">
+        INSERT INTO users (
+        tenant_id,
+        user_id,
+        user_name,
+        email,
+        password,
+        role,
+        create_at
+        ) VALUES (
+        #{tenantId},
+        #{userId},
+        #{userName},
+        #{email},
+        #{password},
+        #{role},
+        NOW()
+        )
     </insert>
 
     <!-- 테넌트별 사용자 목록 조회 -->
-    <select id="selectUsersByTenant" resultType="com.example.unicon.user.vo.UserVO">
+    <select id="selectUsersByTenant" parameterType="com.example.unicon.user.vo.UserVO" resultType="com.example.unicon.user.vo.UserVO">
         SELECT
         u.user_id AS id,
         u.tenant_id AS tenantId,
+        u.user_id AS userId,
         u.name AS userName,
         u.email,
+        u.password,
         u.role,
         u.created_at AS createAt,
-        u.user_id AS userId,
         t.is_active AS isActive,
         t.name AS tenantName,
         t.sub_domain AS subDomain
         FROM user u
-        JOIN tenant t ON u.tenant_id = t.tenant_id
+        INNER JOIN tenant t ON u.tenant_id = t.tenant_id
         WHERE u.tenant_id = #{tenantId}
         <if test="searchKeyword != null and searchKeyword != ''">
             AND (u.name LIKE CONCAT('%', #{searchKeyword}, '%')
@@ -56,16 +72,18 @@
     </select>
 
     <!-- 이메일과 테넌트로 사용자 조회 (중복 검사용) -->
-    <select id="selectUsersByEmailAndTenant" resultType="com.example.unicon.user.vo.UserVO">
+    <select id="selectUsersByEmailAndTenant" parameterType="com.example.unicon.user.vo.UserVO" resultType="com.example.unicon.user.vo.UserVO">
         SELECT
-        u.user_id AS id,
-        u.tenant_id AS tenantId,
-        u.name AS userName,
-        u.email,
-        u.role
-        FROM user u
-        WHERE u.email = #{email}
-        AND u.tenant_id = #{tenantId}
+        user_id AS id,
+        tenant_id AS tenantId,
+        user_id AS userId,
+        name AS userName,
+        email,
+        password,
+        role,
+        created_at AS createAt
+        FROM user
+        WHERE email = #{email} AND tenant_id = #{tenantId}
     </select>
 
     <!-- 사용자 상세 조회 -->
@@ -88,15 +106,14 @@
     </select>
 
     <!-- 사용자 수정 -->
-    <update id="updateUser">
-        UPDATE user SET
-        name = #{userName},
+    <update id="updateUser" parameterType="com.example.unicon.user.vo.UserVO">
+        UPDATE users SET
+        user_name = #{userName},
         email = #{email},
-        <if test="password != null and password != ''">
+        <if test="password != null">
             password = #{password},
         </if>
-        role = #{role},
-        updated_at = NOW()
+        role = #{role}
         WHERE user_id = #{userId}
         AND tenant_id = #{tenantId}
     </update>
@@ -139,6 +156,12 @@
         JOIN tenant t ON u.tenant_id = t.tenant_id
         WHERE u.email = #{email}
         AND t.sub_domain = #{subDomain}
+    </select>
+
+    <select id="selectTenantNameById" parameterType="Integer" resultType="String">
+        SELECT provider
+        FROM tenant_storage_setting
+        WHERE tenant_id = #{tenantId}
     </select>
 
 </mapper>

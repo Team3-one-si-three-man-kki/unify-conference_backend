@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.unicon.user.dao.UserDAO">
+
+    <!-- 테넌트별 사용자 목록 조회 -->
+    <select id="selectUsersByTenant" parameterType="com.example.unicon.user.vo.UserVO" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.user_id AS userId,
+        u.name AS userName,
+        u.email,
+        u.password,
+        u.role,
+        u.created_at AS createAt,
+        t.is_active AS isActive,
+        t.name AS tenantName,
+        t.sub_domain AS subDomain
+        FROM user u
+        INNER JOIN tenant t ON u.tenant_id = t.tenant_id
+        WHERE u.tenant_id = #{tenantId}
+        <if test="searchKeyword != null and searchKeyword != ''">
+            AND (u.name LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR u.email LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+        ORDER BY u.created_at DESC
+    </select>
+
+    <!-- 이메일과 테넌트로 사용자 조회 -->
+    <select id="selectUsersByEmailAndTenant" parameterType="com.example.unicon.user.vo.UserVO" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        user_id AS id,
+        tenant_id AS tenantId,
+        user_id AS userId,
+        name AS userName,
+        email,
+        password,
+        role,
+        created_at AS createAt
+        FROM user
+        WHERE email = #{email} AND tenant_id = #{tenantId}
+    </select>
+
+    <!-- 사용자 등록 -->
+    <insert id="insertUser" parameterType="com.example.unicon.user.vo.UserVO">
+        INSERT INTO user (
+        tenant_id,
+        user_id,
+        name,
+        email,
+        password,
+        role,
+        created_at
+        ) VALUES (
+        #{tenantId},
+        #{userId},
+        #{userName},
+        #{email},
+        #{password},
+        #{role},
+        NOW()
+        )
+    </insert>
+
+    <!-- 사용자 수정 -->
+    <update id="updateUser" parameterType="com.example.unicon.user.vo.UserVO">
+        UPDATE user SET
+        name = #{userName},
+        email = #{email},
+        <if test="password != null">
+            password = #{password},
+        </if>
+        role = #{role}
+        WHERE user_id = #{userId}
+        AND tenant_id = #{tenantId}
+    </update>
+
+    <!-- 사용자 삭제 -->
+    <delete id="deleteUser" parameterType="com.example.unicon.user.vo.UserVO">
+        DELETE FROM user
+        WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 사용자 상세 조회 -->
+    <select id="selectUser" parameterType="com.example.unicon.user.vo.UserVO" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        u.user_id AS id,
+        u.tenant_id AS tenantId,
+        u.user_id AS userId,
+        u.name AS userName,
+        u.email,
+        u.password,
+        u.role,
+        u.created_at AS createAt,
+        t.is_active AS isActive,
+        t.name AS tenantName,
+        t.sub_domain AS subDomain
+        FROM user u
+        JOIN tenant t ON u.tenant_id = t.tenant_id
+        WHERE u.user_id = #{userId}
+    </select>
+
+    <!-- 이메일로 사용자 조회 -->
+    <select id="getUserByEmail" parameterType="string" resultType="com.example.unicon.user.vo.UserVO">
+        SELECT
+        user_id AS id,
+        tenant_id AS tenantId,
+        user_id AS userId,
+        name AS userName,
+        email,
+        password,
+        role
+        FROM user
+        WHERE email = #{email}
+    </select>
+
+</mapper>

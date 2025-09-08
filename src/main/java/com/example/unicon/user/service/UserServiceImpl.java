@@ -160,4 +160,14 @@ public class UserServiceImpl implements UserService {
     public UserVO selectUser(UserVO userVo) throws Exception {
         return userDAO.selectUser(userVo);
     }
+
+    @Override
+    public String getTenantNameById(Integer tenantId) {
+        try {
+            return userMapper.selectTenantNameById(tenantId);
+        } catch (Exception e) {
+            System.err.println("테넌트 이름 조회 중 오류: " + e.getMessage());
+            return null;
+        }
+    }
 }
