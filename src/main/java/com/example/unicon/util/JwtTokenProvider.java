@@ -1,6 +1,7 @@
 package com.example.unicon.util;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,7 +79,7 @@ public class JwtTokenProvider {
 
     // (기타 validateToken, getIsActiveFromToken 등의 메소드는 이전과 동일)
     public boolean validateToken(String token) {
-        if (token.isEmpty()) {
+        if (token == null || token.isEmpty()) {
             return false;
         }
         try {
@@ -86,7 +87,11 @@ public class JwtTokenProvider {
                     .setSigningKey(getSigningKey()).build()
                     .parseClaimsJws(token);
             return true;
+        } catch (ExpiredJwtException e) {
+
+            throw e; //  만료 예외를 그대로 던지도록 수정
         } catch (JwtException | IllegalArgumentException e) {
+            // 그 외 다른 JWT 관련 예외들
             return false;
         }
     }

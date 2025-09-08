@@ -2,6 +2,7 @@ package com.example.unicon.filter;
 
 import com.example.unicon.infrastructure.redis.token.TokenBlacklistRepository;
 import com.example.unicon.util.JwtTokenProvider;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,51 +50,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String token = resolveToken(request);
+        String token = jwtTokenProvider.resolveToken(request);
 
         if (StringUtils.hasText(token)) {
-            if (Boolean.TRUE.equals(tokenBlacklistRepository.isBlacklisted(token))) {
-                request.setAttribute("jwtAuthenticated", false);
-                filterChain.doFilter(request, response);
-                return;
-            }
+            try {
+                // 블랙리스트에 있는지 먼저 확인
+                if (Boolean.TRUE.equals(tokenBlacklistRepository.isBlacklisted(token))) {
+                    // 블랙리스트에 있다면 그냥 통과시켜서 뒤에서 403 에러가 나도록 함
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-            boolean valid = jwtTokenProvider.validateToken(token);
+                // 토큰 유효성 검증 (만료 시 ExpiredJwtException 발생)
+                if (jwtTokenProvider.validateToken(token)) {
+                    String email = jwtTokenProvider.getEmailFromToken(token);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            if (valid) {
-                try {
-                    // 3) 클레임 추출 (userId -> email)
-                    String email    = jwtTokenProvider.getEmailFromToken(token); // getUserIdFromToken -> getEmailFromToken
-                    String tenantId = jwtTokenProvider.getTenantIdFromToken(token);
-                    String role     = jwtTokenProvider.getRoleFromToken(token);
-                    Boolean isActive= jwtTokenProvider.getIsActiveFromToken(token);
-
-                    // 4) SecurityContext 설정 (UserDetailsService에 email 전달)
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email); // userId -> email
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    request.setAttribute("jwtAuthenticated", true);
-                    request.setAttribute("email", email); // 속성 이름도 변경하면 좋음
+                    // request에 tenantId와 email 속성 추가
+                    String tenantId = jwtTokenProvider.getTenantIdFromToken(token);
                     request.setAttribute("tenantId", tenantId);
-                    request.setAttribute("userRole", role);
-                    request.setAttribute("isActive", isActive);
+                    request.setAttribute("email", email);
 
-                } catch (Exception e) {
-                    SecurityContextHolder.clearContext();
-                    request.setAttribute("jwtAuthenticated", false);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
-            } else {
-                request.setAttribute("jwtAuthenticated", false);
+            } catch (ExpiredJwtException e) {
+                // [핵심!] 토큰이 '만료'된 경우, 401 Unauthorized 상태 코드를 응답
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"error\": \"토큰이 만료되었습니다.\"}");
+                return; // 필터 체인을 여기서 중단
+            } catch (Exception e) {
+                // 그 외 다른 모든 예외의 경우
+                SecurityContextHolder.clearContext();
+                // 에러 로깅을 추가하면 좋습니다.
+                // log.error("JWT Filter Error", e);
             }
-        } else {
-            request.setAttribute("jwtAuthenticated", false);
         }
 
         filterChain.doFilter(request, response);
