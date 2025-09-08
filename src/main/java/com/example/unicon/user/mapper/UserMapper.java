@@ -23,4 +23,6 @@ public interface UserMapper {
      * 사용자 정보 저장
      */
     void insertUser(UserVO user);
+
+    String selectTenantNameById(Integer tenantId);
 }

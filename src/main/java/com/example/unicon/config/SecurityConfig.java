@@ -36,10 +36,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/marketplace/**").permitAll()
                         .requestMatchers("/api/guest/**", "/health", "/actuator/**").permitAll()
+                        .requestMatchers("/api/attendance/**").permitAll()
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "MANAGER", "ADMIN")
                         .requestMatchers("/api/manager/**").hasAnyRole("MANAGER", "ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 // 주입받은 클래스 필드를 사용합니다.

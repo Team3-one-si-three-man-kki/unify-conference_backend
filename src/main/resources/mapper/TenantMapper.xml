@@ -2,6 +2,29 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.unicon.tenant.mapper.TenantMapper">
 
+    <resultMap id="TenantMap" type="com.example.unicon.tenant.vo.TenantVO">
+        <id column="tenant_id" property="tenantId"/>
+        <result column="name" property="name"/>
+        <result column="sub_domain" property="subDomain"/>
+        <result column="is_active" property="isActive"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="user_count"   property="userCount"/>
+        <result column="module_count" property="moduleCount"/>
+    </resultMap>
+
+    <sql id="selectColumns">
+        tenant_id, name, sub_domain, is_active, created_at
+    </sql>
+
+    <sql id="whereKeyword">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (name LIKE CONCAT('%', #{keyword}, '%')
+                OR sub_domain LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
     <select id="findBySubDomain" resultType="com.example.unicon.tenant.vo.TenantVO">
         SELECT tenant_id, name, sub_domain, is_active, created_at
         FROM tenant
@@ -12,5 +35,52 @@
         INSERT INTO tenant (name, sub_domain, is_active, created_at)
         VALUES (#{name}, #{subDomain}, #{isActive}, NOW())
     </insert>
+
+    <!-- 목록 -->
+    <select id="findTenants" resultMap="TenantMap">
+        SELECT
+        <include refid="selectColumns"/>
+        FROM tenant
+        <include refid="whereKeyword"/>
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 총 개수 -->
+    <select id="countTenants" resultType="long">
+        SELECT COUNT(*)
+        FROM tenant
+        <include refid="whereKeyword"/>
+    </select>
+
+    <!-- 단건(by id) -->
+    <select id="findById" parameterType="int" resultMap="TenantMap">
+        SELECT
+        <include refid="selectColumns"/>
+        FROM tenant
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+    <!-- 생성 -->
+    <insert id="insert" parameterType="com.example.unicon.tenant.vo.TenantVO"
+            useGeneratedKeys="true" keyProperty="tenantId" keyColumn="tenant_id">
+        INSERT INTO tenant (name, sub_domain, is_active, created_at)
+        VALUES (#{name}, #{subDomain}, #{isActive, jdbcType=TINYINT}, NOW())
+    </insert>
+
+    <!-- 수정 -->
+    <update id="update" parameterType="com.example.unicon.tenant.vo.TenantVO">
+        UPDATE tenant
+        SET
+        name = #{name},
+        sub_domain = #{subDomain},
+        is_active = #{isActive, jdbcType=TINYINT}
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <!-- 삭제 -->
+    <delete id="delete" parameterType="int">
+        DELETE FROM tenant WHERE tenant_id = #{tenantId}
+    </delete>
 
 </mapper>
