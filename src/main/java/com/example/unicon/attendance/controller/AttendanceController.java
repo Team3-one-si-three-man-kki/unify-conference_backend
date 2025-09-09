@@ -16,10 +16,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 @RestController
 @RequestMapping("/api/attendance")
-@CrossOrigin(origins = "*")  // 개발 환경용, 프로덕션에서는 특정 도메인으로 제한
+// @CrossOrigin(origins = "*")  // 개발 환경용, 프로덕션에서는 특정 도메인으로 제한
 public class AttendanceController {
 
     @Autowired

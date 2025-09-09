@@ -14,7 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/modules")
-@CrossOrigin(origins = "*")
+// @CrossOrigin(origins = "*")
 public class ModuleSubscriptionController {
 
     @Resource

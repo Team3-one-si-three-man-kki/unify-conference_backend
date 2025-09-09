@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/marketplace")
-@CrossOrigin(origins = "*")
+// @CrossOrigin(origins = "*")
 public class MarketplaceController {
 
 	@Resource(name = "moduleServiceImpl")
