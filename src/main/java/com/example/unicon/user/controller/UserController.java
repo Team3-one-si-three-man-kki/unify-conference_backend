@@ -27,7 +27,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+// @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class UserController {
 
     private final UserService userService;
@@ -97,6 +97,7 @@ public class UserController {
                     .body(Map.of("isAvailable", false, "message", "이미 사용 중인 이메일입니다."));
         }
     }
+
     @PostMapping("/user/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request, HttpServletResponse response) {
         // 1. Authorization 헤더에서 Access Token 추출
@@ -128,16 +129,35 @@ public class UserController {
      */
     @GetMapping("/user/list")
     public ResponseEntity<Map<String, Object>> getUserList(
-            @RequestParam Integer tenantId,
-            @RequestParam(required = false) String searchKeyword) {
+            @RequestParam(required = false) String searchKeyword,
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
-            System.out.println("사용자 목록 조회 요청 - tenantId: " + tenantId + ", searchKeyword: " + searchKeyword);
+            // JWT 토큰에서 tenantId 자동 추출
+            String token = jwtTokenProvider.resolveToken(request);
+            if (token == null || token.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "인증 토큰이 필요합니다.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // 토큰 유효성 검증
+            if (!jwtTokenProvider.validateToken(token)) {
+                response.put("success", false);
+                response.put("message", "유효하지 않은 토큰입니다.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // 토큰에서 tenantId 추출
+            String tenantIdFromToken = jwtTokenProvider.getTenantIdFromToken(token);
+            Integer tenantId = Integer.valueOf(tenantIdFromToken);
+
+            System.out.println("JWT에서 추출한 tenantId: " + tenantId + ", searchKeyword: " + searchKeyword);
 
             UserVO vo = new UserVO();
-            vo.setTenantId(tenantId);
+            vo.setTenantId(tenantId); // JWT에서 추출한 tenantId 사용
             vo.setSearchKeyword(searchKeyword);
 
             List<UserVO> userList = userService.selectUsersByTenant(vo);
@@ -145,9 +165,22 @@ public class UserController {
             response.put("success", true);
             response.put("data", userList);
             response.put("total", userList.size());
+            response.put("tenantId", tenantId); // 클라이언트에게 실제 tenantId 전달
 
             System.out.println("조회 결과 개수: " + userList.size());
             return ResponseEntity.ok(response);
+
+        } catch (NumberFormatException e) {
+            System.err.println("tenantId 형변환 오류: " + e.getMessage());
+            response.put("success", false);
+            response.put("message", "유효하지 않은 테넌트 정보입니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("토큰 처리 오류: " + e.getMessage());
+            response.put("success", false);
+            response.put("message", "토큰 처리 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 
         } catch (Exception e) {
             System.err.println("사용자 목록 조회 중 오류: " + e.getMessage());
@@ -161,14 +194,29 @@ public class UserController {
         }
     }
 
+
     /**
      * 사용자 목록 저장 (CUD 처리)
      */
     @PostMapping("/user/save")
-    public ResponseEntity<Map<String, Object>> saveUsers(@RequestBody Map<String, Object> requestData) {
+    public ResponseEntity<Map<String, Object>> saveUsers(
+            @RequestBody Map<String, Object> requestData,
+            HttpServletRequest request) {
+
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // JWT에서 tenantId 추출
+            String token = jwtTokenProvider.resolveToken(request);
+            if (token == null || !jwtTokenProvider.validateToken(token)) {
+                response.put("success", false);
+                response.put("message", "유효하지 않은 토큰입니다.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            String tenantIdFromToken = jwtTokenProvider.getTenantIdFromToken(token);
+            Integer tenantId = Integer.valueOf(tenantIdFromToken);
+
             System.out.println("사용자 저장 요청 받음: " + requestData);
 
             @SuppressWarnings("unchecked")
@@ -186,27 +234,19 @@ public class UserController {
                     String rowStatus = (String) userData.get("rowStatus");
 
                     userVo.setUserId(userId == null || userId.isEmpty() || "null".equals(userId) ? null : userId);
-
-                    // tenantId 처리 개선
-                    Object tenantIdObj = userData.get("tenantId");
-                    if (tenantIdObj instanceof Integer) {
-                        userVo.setTenantId((Integer) tenantIdObj);
-                    } else if (tenantIdObj instanceof String) {
-                        userVo.setTenantId(Integer.valueOf((String) tenantIdObj));
-                    }
-
+                    userVo.setTenantId(tenantId); // JWT에서 추출한 tenantId 사용
                     userVo.setUserName((String) userData.get("name"));
                     userVo.setEmail((String) userData.get("email"));
 
                     // 비밀번호 처리
                     String password = (String) userData.get("password");
-                    if (password != null && !password.isEmpty() && !"******".equals(password)) {
+                    if (password != null && !password.isEmpty() && !"******".equals(password) && !"KEEP_EXISTING_PASSWORD".equals(password)) {
                         userVo.setPassword(password);
                     }
 
                     userVo.setRole((String) userData.get("role"));
                     userVo.setCreateAt(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-                    userVo.setRowStatus(rowStatus != null ? rowStatus : "C"); // 기본값 설정
+                    userVo.setRowStatus(rowStatus != null ? rowStatus : "C");
 
                     // isActive 처리
                     Object isActiveObj = userData.get("isActive");
@@ -245,21 +285,25 @@ public class UserController {
      * 테넌트별 이메일 중복 검사
      */
     @PostMapping("/user/check-email-by-tenant")
-    public ResponseEntity<Map<String, Object>> checkEmailByTenant(@RequestBody Map<String, Object> requestData) {
+    public ResponseEntity<Map<String, Object>> checkEmailByTenant(
+            @RequestBody Map<String, Object> requestData,
+            HttpServletRequest request) {
+
         Map<String, Object> response = new HashMap<>();
 
         try {
-            String email = (String) requestData.get("email");
-            Object tenantIdObj = requestData.get("tenantId");
-
-            Integer tenantId;
-            if (tenantIdObj instanceof Integer) {
-                tenantId = (Integer) tenantIdObj;
-            } else if (tenantIdObj instanceof String) {
-                tenantId = Integer.valueOf((String) tenantIdObj);
-            } else {
-                throw new IllegalArgumentException("잘못된 tenantId 형식입니다.");
+            // JWT에서 tenantId 추출
+            String token = jwtTokenProvider.resolveToken(request);
+            if (token == null || !jwtTokenProvider.validateToken(token)) {
+                response.put("success", false);
+                response.put("message", "유효하지 않은 토큰입니다.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
+
+            String tenantIdFromToken = jwtTokenProvider.getTenantIdFromToken(token);
+            Integer tenantId = Integer.valueOf(tenantIdFromToken);
+
+            String email = (String) requestData.get("email");
 
             System.out.println("이메일 중복 검사 요청 - email: " + email + ", tenantId: " + tenantId);
 
@@ -314,4 +358,46 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    /**
+     * 현재 로그인한 사용자의 테넌트 정보 조회
+     */
+    @GetMapping("/user/tenant-info")
+    public ResponseEntity<Map<String, Object>> getCurrentTenantInfo(HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // JWT에서 tenantId 추출 (기존 패턴과 동일)
+            String token = jwtTokenProvider.resolveToken(request);
+            if (token == null || !jwtTokenProvider.validateToken(token)) {
+                response.put("success", false);
+                response.put("message", "유효하지 않은 토큰입니다.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            String tenantIdFromToken = jwtTokenProvider.getTenantIdFromToken(token);
+            Integer tenantId = Integer.valueOf(tenantIdFromToken);
+
+            System.out.println("테넌트 정보 조회 요청 - tenantId: " + tenantId);
+
+            String tenantName = userService.getTenantNameById(tenantId);
+
+            response.put("success", true);
+            response.put("tenantId", tenantId);
+            response.put("tenantName", tenantName);
+
+            System.out.println("테넌트 정보 조회 완료 - tenantName: " + tenantName);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("테넌트 정보 조회 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "테넌트 정보 조회 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+
 }
