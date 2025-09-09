@@ -36,6 +36,18 @@ public class UserController {
     private final CookieUtil cookieUtil;
     private final TokenBlacklistRepository tokenBlacklistRepository;
 
+    @PostMapping("/guest/verify-recaptcha")
+    public ResponseEntity<Map<String, Object>> verifyRecaptcha(@RequestBody Map<String, String> payload) {
+        String recaptchaToken = payload.get("recaptchaToken");
+        boolean isVerified = userService.verifyRecaptcha(recaptchaToken);
+
+        if (isVerified) {
+            return ResponseEntity.ok(Map.of("success", true, "message", "reCAPTCHA verification successful."));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "reCAPTCHA verification failed."));
+        }
+    }
+
     // ... signup 메소드는 동일 ...
     @PostMapping("/guest/signup")
     public ResponseEntity<UserResponseDTO> signup(@Valid @RequestBody SignupRequestDTO signupRequest) {
