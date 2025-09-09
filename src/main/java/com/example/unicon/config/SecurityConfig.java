@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/marketplace/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/guest/signup", "/api/guest/login", "/api/guest/check-email").permitAll()
                         .requestMatchers("/api/guest/**", "/health", "/actuator/**").permitAll()
                         .requestMatchers("/api/attendance/**").permitAll()
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "MANAGER", "ADMIN")
