@@ -110,9 +110,25 @@ jobs:
             KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
             KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
             KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+            GOOGLE_RECAPTCHA_SECRET_KEY: ${{ secrets.GOOGLE_RECAPTCHA_SECRET_KEY }}
             EOF
 
             docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} --env-file .env $IMAGE_TAG
 
             # Clean up the env file
             rm .env
+            # Run the new container
+            docker run -d --name unify-backend -p ${{ secrets.SERVER_PORT }}:${{ secrets.SERVER_PORT }} \
+              -e SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }} \
+              -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
+              -e REDIS_PORT=${{ secrets.REDIS_PORT }} \
+              -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
+              -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
+              -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} \
+              -e KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} \
+              -e GOOGLE_RECAPTCHA_SECRET_KEY=${{ secrets.GOOGLE_RECAPTCHA_SECRET_KEY }} \
+              ghcr.io/${{ github.repository }}:${{ github.sha }}
