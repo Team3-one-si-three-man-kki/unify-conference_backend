@@ -32,4 +32,163 @@
             s.start_time DESC
     </select>
 
+    <!-- 모듈정보 목록 조회 -->
+    <select id="selectListModule" parameterType="com.example.unicon.module.vo.ModuleVO"
+            resultType="com.example.unicon.module.vo.ModuleVO">
+        SELECT
+        module_id as moduleId,
+        code,
+        name,
+        description,
+        price,
+        icon
+        FROM module
+        WHERE 1=1
+        <if test="scModuleId != null and scModuleId != ''">
+            AND module_id LIKE CONCAT('%', #{scModuleId}, '%')
+        </if>
+        <if test="scCode != null and scCode != ''">
+            AND code LIKE CONCAT('%', #{scCode}, '%')
+        </if>
+        <if test="scName != null and scName != ''">
+            AND name LIKE CONCAT('%', #{scName}, '%')
+        </if>
+        <if test="scDescription != null and scDescription != ''">
+            AND description LIKE CONCAT('%', #{scDescription}, '%')
+        </if>
+        <if test="scPrice != null and scPrice != ''">
+            AND CAST(price AS CHAR) LIKE CONCAT('%', #{scPrice}, '%')
+        </if>
+        <if test="scIcon != null and scIcon != ''">
+            AND icon LIKE CONCAT('%', #{scIcon}, '%')
+        </if>
+        ORDER BY module_id
+        <if test="pageSize != null and pageSize > 0">
+            LIMIT #{pageSize}
+            <if test="pageIndex != null and pageIndex > 0">
+                OFFSET #{offset}
+            </if>
+        </if>
+    </select>
+
+    <!-- 모듈정보 목록 전체 카운트 조회 -->
+    <select id="selectListCountModule" parameterType="com.example.unicon.module.vo.ModuleVO"
+            resultType="long">
+        SELECT COUNT(*) as totcnt
+        FROM module
+        WHERE 1=1
+        <if test="scModuleId != null and scModuleId != ''">
+            AND module_id LIKE CONCAT('%', #{scModuleId}, '%')
+        </if>
+        <if test="scCode != null and scCode != ''">
+            AND code LIKE CONCAT('%', #{scCode}, '%')
+        </if>
+        <if test="scName != null and scName != ''">
+            AND name LIKE CONCAT('%', #{scName}, '%')
+        </if>
+        <if test="scDescription != null and scDescription != ''">
+            AND description LIKE CONCAT('%', #{scDescription}, '%')
+        </if>
+        <if test="scPrice != null and scPrice != ''">
+            AND CAST(price AS CHAR) LIKE CONCAT('%', #{scPrice}, '%')
+        </if>
+        <if test="scIcon != null and scIcon != ''">
+            AND icon LIKE CONCAT('%', #{scIcon}, '%')
+        </if>
+    </select>
+
+    <!-- 모듈정보 상세 조회 -->
+    <select id="selectModule" parameterType="com.example.unicon.module.vo.ModuleVO"
+            resultType="com.example.unicon.module.vo.ModuleVO">
+        SELECT
+        module_id as moduleId,
+        code,
+        name,
+        description,
+        price,
+        icon
+        FROM module
+        WHERE module_id = #{moduleId}
+    </select>
+
+    <!-- 모듈정보 등록 -->
+    <insert id="insertModule" parameterType="com.example.unicon.module.vo.ModuleVO">
+        INSERT INTO module (
+        module_id,
+        code,
+        name,
+        description,
+        price,
+        icon
+        ) VALUES (
+        #{moduleId},
+        #{code},
+        #{name},
+        #{description},
+        #{price},
+        #{icon}
+        )
+    </insert>
+
+    <!-- 모듈정보 수정 -->
+    <update id="updateModule" parameterType="com.example.unicon.module.vo.ModuleVO">
+        UPDATE module
+        SET
+        code = #{code},
+        name = #{name},
+        description = #{description},
+        price = #{price},
+        icon = #{icon}
+        WHERE module_id = #{moduleId}
+    </update>
+
+    <!-- 모듈정보 삭제 -->
+    <delete id="deleteModule" parameterType="com.example.unicon.module.vo.ModuleVO">
+        DELETE FROM module WHERE module_id = #{moduleId}
+    </delete>
+
+    <!-- 테넌트 모듈 구독 정보 등록 -->
+    <insert id="insertTenantModule" parameterType="com.example.unicon.module.vo.TenantModuleVO">
+        INSERT INTO tenant_module (
+        module_id,
+        tenant_id,
+        purchased_at
+        ) VALUES (
+        #{moduleId},
+        #{tenantId},
+        CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <!-- 테넌트 모듈 구독 정보 삭제 -->
+    <delete id="deleteTenantModule" parameterType="com.example.unicon.module.vo.TenantModuleVO">
+        DELETE FROM tenant_module
+        WHERE module_id = #{moduleId}
+        AND tenant_id = #{tenantId}
+    </delete>
+
+    <!-- 테넌트의 구독 모듈 목록 조회 -->
+    <select id="selectTenantModules" parameterType="com.example.unicon.module.vo.TenantModuleVO"
+            resultType="com.example.unicon.module.vo.TenantModuleVO">
+        SELECT
+        tm.module_id as moduleId,
+        tm.tenant_id as tenantId,
+        DATE_FORMAT(tm.purchased_at, '%Y-%m-%d %H:%i:%s') as purchasedAt
+        FROM tenant_module tm
+        WHERE tm.tenant_id = #{tenantId}
+        ORDER BY tm.purchased_at DESC
+    </select>
+
+    <!-- 특정 테넌트-모듈 구독 정보 조회 (단건) -->
+    <select id="selectTenantModule" parameterType="com.example.unicon.module.vo.TenantModuleVO"
+            resultType="com.example.unicon.module.vo.TenantModuleVO">
+        SELECT
+        module_id as moduleId,
+        tenant_id as tenantId,
+        DATE_FORMAT(purchased_at, '%Y-%m-%d %H:%i:%s') as purchasedAt
+        FROM tenant_module
+        WHERE module_id = #{moduleId}
+        AND tenant_id = #{tenantId}
+    </select>
+
 </mapper>

@@ -63,4 +63,11 @@ public interface UserService {
      * 사용자 상세 조회
      */
     UserVO selectUser(UserVO userVo) throws Exception;
+
+    String getTenantNameById(Integer tenantId);
+
+    /**
+     * reCAPTCHA 토큰 검증
+     */
+    boolean verifyRecaptcha(String recaptchaToken);
 }

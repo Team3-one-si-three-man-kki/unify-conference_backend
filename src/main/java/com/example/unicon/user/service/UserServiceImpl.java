@@ -8,10 +8,15 @@ import com.example.unicon.user.dto.SignupRequestDTO;
 import com.example.unicon.user.dto.UserResponseDTO;
 import com.example.unicon.user.mapper.UserMapper;
 import com.example.unicon.user.vo.UserVO;
+import com.example.unicon.util.RecaptchaResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +29,12 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final UserDAO userDAO;
     private final PasswordEncoder passwordEncoder;
+    private final RestTemplate restTemplate;
+
+    @Value("${google.recaptcha.secret-key}")
+    private String recaptchaSecretKey;
+
+    private static final String RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 
     @Override
     public boolean isEmailAvailable(String email) {
@@ -159,5 +170,45 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserVO selectUser(UserVO userVo) throws Exception {
         return userDAO.selectUser(userVo);
+    }
+
+    @Override
+    public String getTenantNameById(Integer tenantId) {
+        try {
+            return userMapper.selectTenantNameById(tenantId);
+        } catch (Exception e) {
+            System.err.println("테넌트 이름 조회 중 오류: " + e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public boolean verifyRecaptcha(String recaptchaToken) {
+        if (recaptchaToken == null || recaptchaToken.isEmpty()) {
+            System.out.println("reCAPTCHA token is null or empty.");
+            return false;
+        }
+        System.out.println("Verifying reCAPTCHA token: " + recaptchaToken);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("secret", recaptchaSecretKey);
+        body.add("response", recaptchaToken);
+
+        try {
+            System.out.println("Sending reCAPTCHA verification request to: " + RECAPTCHA_VERIFY_URL);
+            RecaptchaResponse response = restTemplate.postForObject(RECAPTCHA_VERIFY_URL, body, RecaptchaResponse.class);
+            System.out.println("reCAPTCHA verification response: " + response);
+            if (response != null) {
+                System.out.println("reCAPTCHA success: " + response.isSuccess());
+                if (response.getErrorCodes() != null) {
+                    System.out.println("reCAPTCHA error codes: " + String.join(", ", response.getErrorCodes()));
+                }
+            }
+            return response != null && response.isSuccess();
+        } catch (Exception e) {
+            System.err.println("Error during reCAPTCHA verification: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }
